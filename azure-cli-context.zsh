@@ -85,7 +85,6 @@ azctx() {
         return 1
       fi
 
-      typeset active_context
       _r_get_active_context
       typeset active_context=$_rval
 
@@ -101,6 +100,22 @@ azctx() {
       else
         print >&2 "ERROR: Could not remove context $context"
       fi
+      ;;
+    run)
+      if (( $# < 2 )); then
+        _azctx_usage
+        return 1
+      fi
+
+      typeset context=$1
+      shift
+
+      if ! _context_exists $context; then
+        print >&2 "ERROR: context '$context' does not exist"
+        return 1
+      fi
+
+      AZURE_CONFIG_DIR=${ZSH_AZCTX_CONTEXTS_DIR}/${context} $@
       ;;
     use)
       if (( $# != 1 )); then
@@ -136,6 +151,7 @@ _azctx_usage() {
     print >&2 "azctx new <context> - make a new context"
     print >&2 "azctx reset - reset context setting"
     print >&2 "azctx rm <context> - remove an existing context"
+    print >&2 "azctx run <context> <command> - run a command in a context without switching"
     print >&2 "azctx use <context> - switch to a context"
 }
 

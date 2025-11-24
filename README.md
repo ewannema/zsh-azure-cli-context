@@ -49,5 +49,6 @@ azctx list - list available contexts
 azctx new <context> - make a new context
 azctx reset - reset context setting
 azctx rm <context> - remove an existing context
+azctx run <context> <command> - run a command in a context without switching
 azctx use <context> - switch to a context
 ```

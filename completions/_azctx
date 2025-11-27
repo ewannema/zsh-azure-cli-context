@@ -10,6 +10,27 @@ main() {
     '1: :_azctx_commands' \
     '*:: :->args' && ret=0
 
+    case $state in
+      args)
+        case $words[1] in
+          rm)
+            local -a values=('rma' 'rmb')
+            _values 'contexts' $values \
+            && ret=0
+            ;;
+          run)
+            local -a values=('runa' 'runb')
+            _values 'contexts' $values \
+            && ret=0
+            ;;
+          use)
+            local -a values=('usea' 'useb')
+            _values 'contexts' $values \
+            && ret=0
+            ;;
+        esac
+    esac
+
   return ret
 }
 

@@ -1,6 +1,9 @@
 #compdef azctx
 
-main() {
+# Set default contexts directory with fallback
+: ${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}
+
+_azctx() {
   typeset state line
   typeset -i ret
 
@@ -13,20 +16,23 @@ main() {
     case $state in
       args)
         case $words[1] in
-          rm)
-            local -a values=($(_azctx_contexts))
-            _values 'contexts' $values \
-            && ret=0
+          help|list|reset)
+            # No completion needed for these commands
+            ;;
+          new)
+            _message 'context name' && ret=0
+            ;;
+          rm|use)
+            _azctx_contexts && ret=0
             ;;
           run)
-            local -a values=($(_azctx_contexts))
-            _values 'contexts' $values \
-            && ret=0
-            ;;
-          use)
-            local -a values=($(_azctx_contexts))
-            _values 'contexts' $values \
-            && ret=0
+            if (( CURRENT == 2 )); then
+              _azctx_contexts && ret=0
+            else
+              shift words
+              (( CURRENT-- ))
+              _normal && ret=0
+            fi
             ;;
         esac
     esac
@@ -49,8 +55,18 @@ _azctx_commands() {
 }
 
 _azctx_contexts() {
-  typeset -a contexts=("${(@f)$(find "${ZSH_AZCTX_CONTEXTS_DIR}" -type d -mindepth 1 -maxdepth 1 -exec basename {} \; | sort )}")
-  print "$contexts"
+  local -a contexts
+
+  contexts=("${ZSH_AZCTX_CONTEXTS_DIR}"/*(N:t))
+
+  if (( ${#contexts} == 0 )); then
+    _message 'no contexts available'
+    return 1
+  fi
+
+  contexts=("${(on)contexts[@]}")
+
+  _describe 'context' contexts
 }
 
-main
+_azctx "$@"

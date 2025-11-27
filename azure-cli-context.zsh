@@ -3,30 +3,38 @@
 #------------------------------------------------------------------------------
 # Global configuration variables
 #------------------------------------------------------------------------------
-: ${ZSH_AZCTX_CONTEXTS_DIR="${HOME}/.azure-contexts"}
+: ${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}
+
+#------------------------------------------------------------------------------
+# Add completions to fpath
+#------------------------------------------------------------------------------
+if [[ -d "${0:A:h}/completions" ]]; then
+  fpath=("${0:A:h}/completions" $fpath)
+fi
 
 #------------------------------------------------------------------------------
 # Internal global variables
 #------------------------------------------------------------------------------
-typeset -g _rval
-typeset -g -a _rval_a
-
-#------------------------------------------------------------------------------
-# Set up
-#------------------------------------------------------------------------------
-[[ -d ${ZSH_AZCTX_CONTEXTS_DIR} ]] || mkdir -p ${ZSH_AZCTX_CONTEXTS_DIR}
+typeset -g REPLY
+typeset -g -a reply
 
 #------------------------------------------------------------------------------
 # Public interface
 #------------------------------------------------------------------------------
 
 azctx() {
+  # Lazy initialization - create contexts directory on first use
+  if [[ ! -d $ZSH_AZCTX_CONTEXTS_DIR ]] && ! mkdir -p -- "$ZSH_AZCTX_CONTEXTS_DIR"; then
+    print >&2 "ERROR: Could not create contexts dir: $ZSH_AZCTX_CONTEXTS_DIR"
+    return 1
+  fi
+
   if (( $# == 0 )); then
     _azctx_usage
     return 1
   fi
 
-  typeset command=$1
+  local command=$1
   shift
 
   case "${command}" in
@@ -36,12 +44,12 @@ azctx() {
       ;;
     list)
       _r_get_contexts
-      typeset -a contexts=(${_rval_a})
+      local -a contexts=("${reply[@]}")
 
       _r_get_active_context
-      typeset active_context=$_rval
+      local active_context=$REPLY
 
-      echo "Active context: $active_context"
+      print "Active context: ${active_context:-<none>}"
       printf '%s\n' "${contexts[@]}"
       ;;
     new)
@@ -50,28 +58,29 @@ azctx() {
         return 1
       fi
 
-      typeset context=$1
+      local context=$1
 
-      if _context_exists $context; then
+      if _context_exists "$context"; then
         print >&2 "ERROR: context '$context' already exists"
         return 1
       fi
 
-      mkdir -p ${ZSH_AZCTX_CONTEXTS_DIR}/${context}
-
-      if [[ $? == 0 ]]; then
+      if mkdir -p -- "${ZSH_AZCTX_CONTEXTS_DIR}/${context}"; then
         print "Created context: $context"
       else
         print >&2 "ERROR: Could not create context $context"
+        return 1
       fi
       ;;
     reset)
       _r_get_active_context
-      typeset active_context=$_rval
+      local active_context=$REPLY
 
       if [[ -n $active_context ]]; then
         unset AZURE_CONFIG_DIR
       fi
+
+      print "Reset active context"
       ;;
     rm)
       if (( $# != 1 )); then
@@ -79,27 +88,26 @@ azctx() {
         return 1
       fi
 
-      typeset context=$1
-      if ! _context_exists $context; then
+      local context=$1
+      if ! _context_exists "$context"; then
         print >&2 "ERROR: context '$context' does not exist"
         return 1
       fi
 
       _r_get_active_context
-      typeset active_context=$_rval
+      local active_context=$REPLY
 
       if [[ "$context" == "$active_context" ]]; then
         print >&2 "ERROR: can not remove active context '$context'"
         return 1
       fi
 
-      rm -rf ${ZSH_AZCTX_CONTEXTS_DIR}/${context}
-
-      if [[ $? == 0 ]]; then
-        print "Removed context: $context"
-      else
+      if ! rm -rf -- "$ZSH_AZCTX_CONTEXTS_DIR/$context"; then
         print >&2 "ERROR: Could not remove context $context"
+        return 1
       fi
+
+      print "Removed context: $context"
       ;;
     run)
       if (( $# < 2 )); then
@@ -107,15 +115,15 @@ azctx() {
         return 1
       fi
 
-      typeset context=$1
+      local context=$1
       shift
 
-      if ! _context_exists $context; then
+      if ! _context_exists "$context"; then
         print >&2 "ERROR: context '$context' does not exist"
         return 1
       fi
 
-      AZURE_CONFIG_DIR=${ZSH_AZCTX_CONTEXTS_DIR}/${context} $@
+      AZURE_CONFIG_DIR="${ZSH_AZCTX_CONTEXTS_DIR}/${context}" "$@"
       ;;
     use)
       if (( $# != 1 )); then
@@ -123,17 +131,17 @@ azctx() {
         return 1
       fi
 
-      typeset context=$1
+      local context=$1
 
-      if ! _context_exists $context; then
+      if ! _context_exists "$context"; then
         print >&2 "ERROR: context '$context' does not exist"
         return 1
       fi
 
-      export AZURE_CONFIG_DIR=${ZSH_AZCTX_CONTEXTS_DIR}/${context}
+      export AZURE_CONFIG_DIR="${ZSH_AZCTX_CONTEXTS_DIR}/${context}"
       ;;
     *)
-      print >&2 "ERROR: Unknown command: ${command}\n"
+      print >&2 "ERROR: Unknown command: ${command}"
       _azctx_usage
       return 2
       ;;
@@ -156,44 +164,45 @@ _azctx_usage() {
 }
 
 _r_get_contexts() {
-  typeset -a contexts=("${(@f)$(find "${ZSH_AZCTX_CONTEXTS_DIR}" -type d -mindepth 1 -maxdepth 1 -exec basename {} \; | sort )}")
+  local -a contexts
+  # get dirs and return the last component (tail)
+  contexts=("$ZSH_AZCTX_CONTEXTS_DIR"/*(N/:t))
 
-  _rval_a=($contexts)
-  return
+  # sort the contexts
+  contexts=("${(on)contexts[@]}")
+
+  reply=("${contexts[@]}")
 }
 
 _context_exists() {
   _r_get_contexts
-  typeset -a contexts=($_rval_a)
+  local -a contexts=("${reply[@]}")
 
-  if [[ ${contexts[(ie)$1]} -le ${#contexts} ]]; then
-    return 0
-  else
-    return 1
-  fi
+  # non-zero index -> found
+  (( ${contexts[(Ie)$1]} ))
 }
 
 _r_get_active_context() {
   # Azure config dir is not set
   if [[ -z "$AZURE_CONFIG_DIR" ]]; then
-    _rval=""
+    REPLY=""
     return
   fi
 
   # Azure config dir is set, but is not one of our context directories
-  if [[ "$AZURE_CONFIG_DIR" != "$ZSH_AZCTX_CONTEXTS_DIR"* ]]; then
-    _rval=""
+  if [[ $AZURE_CONFIG_DIR != $ZSH_AZCTX_CONTEXTS_DIR/* ]]; then
+    REPLY=""
     return
   fi
 
-  typeset context=$(basename $AZURE_CONFIG_DIR)
+  local context=${AZURE_CONFIG_DIR:t}
 
   # Configured context does not exist and is therefore not considered valid
-  if ! _context_exists $context; then
-    _rval=""
+  if ! _context_exists "$context"; then
+    REPLY=""
     return
   fi
 
-  _rval=$context
+  REPLY=$context
   return
 }

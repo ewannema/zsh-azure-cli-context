@@ -39,7 +39,50 @@ azctx list
 
 ## Installation
 
-Add the plugin using your ZSH plugin manager of choice.
+### Using Zinit
+
+```zsh
+zinit light ewannema/zsh-azure-cli-context
+```
+
+### Using Oh-My-Zsh
+
+```zsh
+# Clone to custom plugins directory
+git clone https://github.com/ewannema/zsh-azure-cli-context \
+  ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-azure-cli-context
+
+# Add to plugins array in ~/.zshrc
+plugins=(... zsh-azure-cli-context)
+```
+
+### Using Antigen
+
+```zsh
+antigen bundle ewannema/zsh-azure-cli-context
+```
+
+### Using zplug
+
+```zsh
+zplug "ewannema/zsh-azure-cli-context"
+```
+
+### Manual Installation
+
+```zsh
+# Clone the repository
+git clone https://github.com/ewannema/zsh-azure-cli-context ~/.zsh/zsh-azure-cli-context
+
+# Add to your ~/.zshrc
+source ~/.zsh/zsh-azure-cli-context/azure-cli-context.zsh
+```
+
+**Note:** The plugin automatically adds its completion directory to `fpath`. If completions don't work, ensure you have `compinit` loaded after sourcing the plugin:
+
+```zsh
+autoload -Uz compinit && compinit
+```
 
 ## Commands
 

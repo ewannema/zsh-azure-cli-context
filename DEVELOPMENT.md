@@ -19,8 +19,6 @@ cd zsh-azure-cli-context
 
 ## Testing
 
-This plugin includes comprehensive automated tests written in pure ZSH (no external test framework required).
-
 ### Install Testing Dependencies
 
 **Using Homebrew (macOS):**
@@ -41,8 +39,6 @@ brew install shellcheck
 **Run all tests:**
 ```zsh
 make test
-# or
-./scripts/test
 ```
 
 **Run linting:**
@@ -51,14 +47,6 @@ make lint
 ```
 
 ### Test Structure
-
-The test suite (`scripts/test`) is a self-contained ZSH script that:
-- Provides simple test helpers (test_case, pass, fail)
-- Sets up and tears down test environments automatically
-- Outputs colored results with clear pass/fail indicators
-- Returns proper exit codes for CI/CD integration
-
-No external dependencies beyond ZSH itself are required to run tests.
 
 ## Project Structure
 
@@ -194,13 +182,6 @@ Check the Actions tab on GitHub to see test results.
 
 ## Debugging
 
-### Enable ZSH Debug Mode
-
-```zsh
-# Run with execution trace
-zsh -x ./azure-cli-context.zsh
-```
-
 ### Debug Tests
 
 ```zsh
@@ -216,23 +197,9 @@ echo "DEBUG: AZURE_CONFIG_DIR: $AZURE_CONFIG_DIR" >&2
 teardown
 ```
 
-## Releasing
-
-(For maintainers)
-
-1. Update version number if using semantic versioning
-2. Update CHANGELOG.md with notable changes
-3. Create a git tag:
-   ```zsh
-   git tag -a v1.0.0 -m "Release version 1.0.0"
-   git push origin v1.0.0
-   ```
-4. Create a GitHub release with release notes
-
 ## Getting Help
 
 - **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/ewannema/zsh-azure-cli-context/issues)
-- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/ewannema/zsh-azure-cli-context/discussions)
 - **Pull Requests**: Submit contributions via pull requests
 
 ## Resources

@@ -14,17 +14,17 @@ main() {
       args)
         case $words[1] in
           rm)
-            local -a values=('rma' 'rmb')
+            local -a values=($(_azctx_contexts))
             _values 'contexts' $values \
             && ret=0
             ;;
           run)
-            local -a values=('runa' 'runb')
+            local -a values=($(_azctx_contexts))
             _values 'contexts' $values \
             && ret=0
             ;;
           use)
-            local -a values=('usea' 'useb')
+            local -a values=($(_azctx_contexts))
             _values 'contexts' $values \
             && ret=0
             ;;
@@ -46,6 +46,11 @@ _azctx_commands() {
     )
 
     _describe -t commands 'command' commands "$@"
+}
+
+_azctx_contexts() {
+  typeset -a contexts=("${(@f)$(find "${ZSH_AZCTX_CONTEXTS_DIR}" -type d -mindepth 1 -maxdepth 1 -exec basename {} \; | sort )}")
+  print "$contexts"
 }
 
 main

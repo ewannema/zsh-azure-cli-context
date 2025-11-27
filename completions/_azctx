@@ -1,0 +1,30 @@
+#compdef azctx
+
+main() {
+  typeset state line
+  typeset -i ret
+
+  ret=1
+
+  _arguments -C \
+    '1: :_azctx_commands' \
+    '*:: :->args' && ret=0
+
+  return ret
+}
+
+_azctx_commands() {
+    local -a commands=(
+        "help:Show help"
+        "list:List available contexts"
+        "new:Make a new context"
+        "reset:Reset context settings"
+        "rm:Remove a context"
+        "run:Run a command in a context"
+        "use:Switch to a context"
+    )
+
+    _describe -t commands 'command' commands "$@"
+}
+
+main

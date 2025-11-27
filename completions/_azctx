@@ -1,0 +1,56 @@
+#compdef azctx
+
+main() {
+  typeset state line
+  typeset -i ret
+
+  ret=1
+
+  _arguments -C \
+    '1: :_azctx_commands' \
+    '*:: :->args' && ret=0
+
+    case $state in
+      args)
+        case $words[1] in
+          rm)
+            local -a values=($(_azctx_contexts))
+            _values 'contexts' $values \
+            && ret=0
+            ;;
+          run)
+            local -a values=($(_azctx_contexts))
+            _values 'contexts' $values \
+            && ret=0
+            ;;
+          use)
+            local -a values=($(_azctx_contexts))
+            _values 'contexts' $values \
+            && ret=0
+            ;;
+        esac
+    esac
+
+  return ret
+}
+
+_azctx_commands() {
+    local -a commands=(
+        "help:Show help"
+        "list:List available contexts"
+        "new:Make a new context"
+        "reset:Reset context settings"
+        "rm:Remove a context"
+        "run:Run a command in a context"
+        "use:Switch to a context"
+    )
+
+    _describe -t commands 'command' commands "$@"
+}
+
+_azctx_contexts() {
+  typeset -a contexts=("${(@f)$(find "${ZSH_AZCTX_CONTEXTS_DIR}" -type d -mindepth 1 -maxdepth 1 -exec basename {} \; | sort )}")
+  print "$contexts"
+}
+
+main

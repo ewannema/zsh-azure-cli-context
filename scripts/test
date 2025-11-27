@@ -1,0 +1,418 @@
+#!/usr/bin/env zsh
+
+#------------------------------------------------------------------------------
+# Simple ZSH test harness - no external dependencies required
+#------------------------------------------------------------------------------
+
+# Test counters
+typeset -gi TESTS_RUN=0
+typeset -gi TESTS_PASSED=0
+typeset -gi TESTS_FAILED=0
+
+# Colors for output
+if [[ -t 1 ]]; then
+  RED='\033[0;31m'
+  GREEN='\033[0;32m'
+  YELLOW='\033[0;33m'
+  BLUE='\033[0;34m'
+  NC='\033[0m'
+else
+  RED=''
+  GREEN=''
+  YELLOW=''
+  BLUE=''
+  NC=''
+fi
+
+# Command output capture
+typeset -g CMD_OUTPUT
+typeset -gi CMD_EXIT
+
+# Test case helper
+test_case() {
+  local description="$1"
+  ((TESTS_RUN++))
+  printf "${YELLOW}▶${NC} %s ... " "$description"
+}
+
+# Test result helpers
+pass() {
+  ((TESTS_PASSED++))
+  printf "${GREEN}✓${NC}\n"
+}
+
+fail() {
+  ((TESTS_FAILED++))
+  printf "${RED}✗${NC}\n"
+  [[ -n "$1" ]] && printf "  ${RED}Error:${NC} %s\n" "$1" >&2
+}
+
+# Setup and teardown
+setup() {
+  export ZSH_AZCTX_CONTEXTS_DIR=$(mktemp -d)
+  source "${PWD}/azure-cli-context.zsh"
+}
+
+teardown() {
+  rm -rf "$ZSH_AZCTX_CONTEXTS_DIR"
+  unset AZURE_CONFIG_DIR
+}
+
+# Run command and capture output/exit code
+run_command() {
+  CMD_OUTPUT=$("$@" 2>&1)
+  CMD_EXIT=$?
+}
+
+#------------------------------------------------------------------------------
+# azctx new tests
+#------------------------------------------------------------------------------
+
+test_case "azctx new creates a context"
+setup
+azctx new test-context >/dev/null 2>&1
+if [[ -d "${ZSH_AZCTX_CONTEXTS_DIR}/test-context" ]]; then
+  pass
+else
+  fail "Directory was not created"
+fi
+teardown
+
+test_case "azctx new rejects duplicate context"
+setup
+azctx new test-context >/dev/null 2>&1
+run_command azctx new test-context
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"already exists"* ]]; then
+  pass
+else
+  fail "Expected error about duplicate context"
+fi
+teardown
+
+test_case "azctx new requires exactly one argument"
+setup
+run_command azctx new
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"azctx <command>"* ]]; then
+  pass
+else
+  fail "Expected usage message"
+fi
+teardown
+
+#------------------------------------------------------------------------------
+# azctx new validation tests
+#------------------------------------------------------------------------------
+
+test_case "azctx new rejects empty name"
+setup
+run_command azctx new ""
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"cannot be empty"* ]]; then
+  pass
+else
+  fail "Expected error about empty name"
+fi
+teardown
+
+test_case "azctx new rejects slash in name"
+setup
+run_command azctx new "context/with/slash"
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"cannot contain '/'"* ]]; then
+  pass
+else
+  fail "Expected error about slash"
+fi
+teardown
+
+test_case "azctx new rejects dot"
+setup
+run_command azctx new "."
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"Invalid context name"* ]]; then
+  pass
+else
+  fail "Expected error about invalid name"
+fi
+teardown
+
+test_case "azctx new rejects double dot"
+setup
+run_command azctx new ".."
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"Invalid context name"* ]]; then
+  pass
+else
+  fail "Expected error about invalid name"
+fi
+teardown
+
+test_case "azctx new rejects name starting with dash"
+setup
+run_command azctx new "-context"
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"cannot start with '-'"* ]]; then
+  pass
+else
+  fail "Expected error about dash prefix"
+fi
+teardown
+
+test_case "azctx new accepts valid names with underscores and dashes"
+setup
+azctx new "valid_context-name" >/dev/null 2>&1
+if [[ -d "${ZSH_AZCTX_CONTEXTS_DIR}/valid_context-name" ]]; then
+  pass
+else
+  fail "Valid name was rejected"
+fi
+teardown
+
+#------------------------------------------------------------------------------
+# azctx use tests
+#------------------------------------------------------------------------------
+
+test_case "azctx use sets AZURE_CONFIG_DIR"
+setup
+azctx new test-context >/dev/null 2>&1
+azctx use test-context >/dev/null 2>&1
+if [[ "$AZURE_CONFIG_DIR" == "${ZSH_AZCTX_CONTEXTS_DIR}/test-context" ]]; then
+  pass
+else
+  fail "AZURE_CONFIG_DIR not set correctly"
+fi
+teardown
+
+test_case "azctx use rejects non-existent context"
+setup
+run_command azctx use nonexistent
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"does not exist"* ]]; then
+  pass
+else
+  fail "Expected error about non-existent context"
+fi
+teardown
+
+#------------------------------------------------------------------------------
+# azctx list tests
+#------------------------------------------------------------------------------
+
+test_case "azctx list shows all contexts sorted"
+setup
+azctx new zulu >/dev/null 2>&1
+azctx new alpha >/dev/null 2>&1
+azctx new bravo >/dev/null 2>&1
+run_command azctx list
+if [[ $CMD_EXIT -eq 0 ]] && \
+   [[ "$CMD_OUTPUT" == *"alpha"* ]] && \
+   [[ "$CMD_OUTPUT" == *"bravo"* ]] && \
+   [[ "$CMD_OUTPUT" == *"zulu"* ]]; then
+  # Check they're sorted (alpha should appear before zulu)
+  local alpha_line=$(echo "$CMD_OUTPUT" | grep -n "alpha" | cut -d: -f1)
+  local zulu_line=$(echo "$CMD_OUTPUT" | grep -n "zulu" | cut -d: -f1)
+  if [[ $alpha_line -lt $zulu_line ]]; then
+    pass
+  else
+    fail "Contexts not properly sorted"
+  fi
+else
+  fail "Expected all contexts to be listed"
+fi
+teardown
+
+test_case "azctx list shows active context"
+setup
+azctx new test-context >/dev/null 2>&1
+azctx use test-context >/dev/null 2>&1
+run_command azctx list
+if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == *"Active context: test-context"* ]]; then
+  pass
+else
+  fail "Expected active context to be shown"
+fi
+teardown
+
+test_case "azctx list shows none when no active context"
+setup
+azctx new test-context >/dev/null 2>&1
+run_command azctx list
+if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == *"Active context: <none>"* ]]; then
+  pass
+else
+  fail "Expected '<none>' when no active context"
+fi
+teardown
+
+#------------------------------------------------------------------------------
+# azctx rm tests
+#------------------------------------------------------------------------------
+
+test_case "azctx rm removes context"
+setup
+azctx new test-context >/dev/null 2>&1
+azctx rm test-context >/dev/null 2>&1
+if [[ ! -d "${ZSH_AZCTX_CONTEXTS_DIR}/test-context" ]]; then
+  pass
+else
+  fail "Directory was not removed"
+fi
+teardown
+
+test_case "azctx rm prevents removing active context"
+setup
+azctx new test-context >/dev/null 2>&1
+azctx use test-context >/dev/null 2>&1
+run_command azctx rm test-context
+if [[ $CMD_EXIT -ne 0 ]] && \
+   [[ "$CMD_OUTPUT" == *"can not remove active context"* ]] && \
+   [[ -d "${ZSH_AZCTX_CONTEXTS_DIR}/test-context" ]]; then
+  pass
+else
+  fail "Active context should not be removable"
+fi
+teardown
+
+test_case "azctx rm rejects non-existent context"
+setup
+run_command azctx rm nonexistent
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"does not exist"* ]]; then
+  pass
+else
+  fail "Expected error about non-existent context"
+fi
+teardown
+
+#------------------------------------------------------------------------------
+# azctx run tests
+#------------------------------------------------------------------------------
+
+test_case "azctx run executes command in context"
+setup
+azctx new test-context >/dev/null 2>&1
+run_command azctx run test-context printenv AZURE_CONFIG_DIR
+if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == "${ZSH_AZCTX_CONTEXTS_DIR}/test-context" ]]; then
+  pass
+else
+  fail "Command not executed in correct context"
+fi
+teardown
+
+test_case "azctx run does not change current context"
+setup
+azctx new context1 >/dev/null 2>&1
+azctx new context2 >/dev/null 2>&1
+azctx use context1 >/dev/null 2>&1
+azctx run context2 echo "test" >/dev/null 2>&1
+if [[ "$AZURE_CONFIG_DIR" == "${ZSH_AZCTX_CONTEXTS_DIR}/context1" ]]; then
+  pass
+else
+  fail "Current context was changed"
+fi
+teardown
+
+test_case "azctx run returns command exit code"
+setup
+azctx new test-context >/dev/null 2>&1
+run_command azctx run test-context false
+if [[ $CMD_EXIT -eq 1 ]]; then
+  pass
+else
+  fail "Expected exit code 1"
+fi
+teardown
+
+test_case "azctx run requires at least 2 arguments"
+setup
+azctx new test-context >/dev/null 2>&1
+run_command azctx run test-context
+if [[ $CMD_EXIT -ne 0 ]]; then
+  pass
+else
+  fail "Expected error about missing arguments"
+fi
+teardown
+
+#------------------------------------------------------------------------------
+# azctx reset tests
+#------------------------------------------------------------------------------
+
+test_case "azctx reset unsets AZURE_CONFIG_DIR"
+setup
+azctx new test-context >/dev/null 2>&1
+azctx use test-context >/dev/null 2>&1
+azctx reset >/dev/null 2>&1
+if [[ -z "$AZURE_CONFIG_DIR" ]]; then
+  pass
+else
+  fail "AZURE_CONFIG_DIR was not unset"
+fi
+teardown
+
+test_case "azctx reset handles no active context gracefully"
+setup
+run_command azctx reset
+if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == *"Reset active context"* ]]; then
+  pass
+else
+  fail "Expected successful reset with message"
+fi
+teardown
+
+#------------------------------------------------------------------------------
+# Helper function tests
+#------------------------------------------------------------------------------
+
+test_case "_context_exists returns true for existing context"
+setup
+azctx new test-context >/dev/null 2>&1
+if _context_exists test-context; then
+  pass
+else
+  fail "Expected function to return true"
+fi
+teardown
+
+test_case "_context_exists returns false for non-existent context"
+setup
+if ! _context_exists nonexistent; then
+  pass
+else
+  fail "Expected function to return false"
+fi
+teardown
+
+test_case "_r_get_active_context returns empty when not set"
+setup
+_r_get_active_context
+if [[ -z "$REPLY" ]]; then
+  pass
+else
+  fail "Expected empty REPLY"
+fi
+teardown
+
+test_case "_r_get_active_context returns context name when set"
+setup
+azctx new test-context >/dev/null 2>&1
+azctx use test-context >/dev/null 2>&1
+_r_get_active_context
+if [[ "$REPLY" == "test-context" ]]; then
+  pass
+else
+  fail "Expected REPLY to be 'test-context'"
+fi
+teardown
+
+#------------------------------------------------------------------------------
+# Summary
+#------------------------------------------------------------------------------
+
+echo ""
+echo "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+printf "Tests run:    %d\n" $TESTS_RUN
+printf "Passed:       ${GREEN}%d${NC}\n" $TESTS_PASSED
+printf "Failed:       ${RED}%d${NC}\n" $TESTS_FAILED
+echo "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+if [[ $TESTS_FAILED -eq 0 ]]; then
+  echo "${GREEN}✓ All tests passed!${NC}"
+  exit 0
+else
+  echo "${RED}✗ Some tests failed${NC}"
+  exit 1
+fi

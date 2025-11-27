@@ -3,7 +3,7 @@
 #------------------------------------------------------------------------------
 # Global configuration variables
 #------------------------------------------------------------------------------
-: ${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}
+: "${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}"
 
 #------------------------------------------------------------------------------
 # Add completions to fpath
@@ -60,6 +60,11 @@ azctx() {
 
       local context=$1
 
+      # Validate context name
+      if ! _validate_context_name "$context"; then
+        return 1
+      fi
+
       if _context_exists "$context"; then
         print >&2 "ERROR: context '$context' already exists"
         return 1
@@ -102,7 +107,7 @@ azctx() {
         return 1
       fi
 
-      if ! rm -rf -- "$ZSH_AZCTX_CONTEXTS_DIR/$context"; then
+      if ! rm -rf -- "${ZSH_AZCTX_CONTEXTS_DIR:?}/$context"; then
         print >&2 "ERROR: Could not remove context $context"
         return 1
       fi
@@ -152,15 +157,45 @@ azctx() {
 # Private implementation
 #------------------------------------------------------------------------------
 
+_validate_context_name() {
+  local context=$1
+
+  # Empty name
+  if [[ -z "$context" ]]; then
+    print >&2 "ERROR: Context name cannot be empty"
+    return 1
+  fi
+
+  # Dots (. or ..)
+  if [[ "$context" == "." || "$context" == ".." ]]; then
+    print >&2 "ERROR: Invalid context name '$context'"
+    return 1
+  fi
+
+  # Contains slash
+  if [[ "$context" == */* ]]; then
+    print >&2 "ERROR: Context name cannot contain '/'"
+    return 1
+  fi
+
+  # Starts with dash (causes issues with commands)
+  if [[ "$context" == -* ]]; then
+    print >&2 "ERROR: Context name cannot start with '-'"
+    return 1
+  fi
+
+  return 0
+}
+
 _azctx_usage() {
-    print >&2 "azctx <command>"
-    print >&2 "azctx help - show this help"
-    print >&2 "azctx list - list available contexts"
-    print >&2 "azctx new <context> - make a new context"
-    print >&2 "azctx reset - reset context setting"
-    print >&2 "azctx rm <context> - remove an existing context"
-    print >&2 "azctx run <context> <command> - run a command in a context without switching"
-    print >&2 "azctx use <context> - switch to a context"
+  print >&2 "azctx <command>"
+  print >&2 "azctx help - show this help"
+  print >&2 "azctx list - list available contexts"
+  print >&2 "azctx new <context> - make a new context"
+  print >&2 "azctx reset - reset context setting"
+  print >&2 "azctx rm <context> - remove an existing context"
+  print >&2 "azctx run <context> <command> - run a command in a context without switching"
+  print >&2 "azctx use <context> - switch to a context"
 }
 
 _r_get_contexts() {

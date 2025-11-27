@@ -1,0 +1,55 @@
+name: Tests
+
+on:
+  push: {}
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        zsh-version: ['5.8', '5.9']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install ZSH (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y zsh
+
+    - name: Install ZSH (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install zsh
+
+    - name: Run tests
+      run: make test
+
+    - name: Install shellcheck
+      run: |
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get install -y shellcheck
+        else
+          brew install shellcheck
+        fi
+
+    - name: Run linting
+      run: make lint
+
+    - name: Check formatting consistency
+      if: matrix.os == 'ubuntu-latest' && matrix.zsh-version == '5.9'
+      run: |
+        # Check for trailing whitespace
+        ! grep -r '[[:blank:]]$' --include='*.zsh' --include='_*' .
+
+        # Check for tabs vs spaces consistency
+        if grep -P '\t' azure-cli-context.zsh completions/_azctx; then
+          echo "Found tabs - please use spaces for indentation"
+          exit 1
+        fi

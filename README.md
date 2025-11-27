@@ -37,6 +37,26 @@ az account show
 azctx list
 ```
 
+## Context Naming Rules
+
+Context names must follow these rules:
+- Cannot be empty
+- Cannot contain `/` (slashes)
+- Cannot be `.` or `..`
+- Cannot start with `-` (dash)
+
+**Recommended:** Use alphanumeric characters, underscores, and dashes only.
+
+**Examples:**
+```zsh
+azctx new prod              # ✓ Valid
+azctx new dev-account       # ✓ Valid
+azctx new user_context_01   # ✓ Valid
+azctx new my/context        # ✗ Invalid - contains slash
+azctx new .                 # ✗ Invalid - special name
+azctx new -context          # ✗ Invalid - starts with dash
+```
+
 ## Installation
 
 ### Using Zinit
@@ -95,3 +115,7 @@ azctx rm <context> - remove an existing context
 azctx run <context> <command> - run a command in a context without switching
 azctx use <context> - switch to a context
 ```
+
+## Contributing
+
+Contributions are welcome! Please see [DEVELOPMENT.md](DEVELOPMENT.md) for development setup, testing guidelines, and contribution workflow.

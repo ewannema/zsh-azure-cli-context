@@ -1,7 +1,7 @@
 #compdef azctx
 
 # Set default contexts directory with fallback
-: ${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}
+: "${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}"
 
 _azctx() {
   typeset state line
@@ -15,7 +15,7 @@ _azctx() {
 
     case $state in
       args)
-        case $words[1] in
+        case ${words[1]} in
           help|list|reset)
             # No completion needed for these commands
             ;;
@@ -37,6 +37,7 @@ _azctx() {
         esac
     esac
 
+  # shellcheck disable=SC2152
   return ret
 }
 

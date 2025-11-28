@@ -35,6 +35,9 @@ az account show
 
 # View available contexts
 azctx list
+
+# Check which context is currently active
+azctx current
 ```
 
 ## Context Naming Rules
@@ -107,6 +110,7 @@ autoload -Uz compinit && compinit
 ## Commands
 
 ```
+azctx current - show the current active context
 azctx help - show this help
 azctx list - list available contexts
 azctx new <context> - make a new context

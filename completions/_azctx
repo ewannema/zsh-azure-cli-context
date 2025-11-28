@@ -15,7 +15,7 @@ _azctx() {
     case $state in
       args)
         case ${words[1]} in
-          help|list|reset)
+          current|help|list|reset)
             # No completion needed for these commands
             ;;
           new)
@@ -42,6 +42,7 @@ _azctx() {
 
 _azctx_commands() {
     local -a commands=(
+        "current:Show the current active context"
         "help:Show help"
         "list:List available contexts"
         "new:Make a new context"

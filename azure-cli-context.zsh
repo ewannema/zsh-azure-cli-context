@@ -58,8 +58,14 @@ azctx() {
       _r_get_active_context
       local active_context=$REPLY
 
-      print "Active context: ${active_context:-<none>}"
-      printf '%s\n' "${contexts[@]}"
+      # Print contexts with visual indicator for active
+      for context in "${contexts[@]}"; do
+        if [[ "$context" == "$active_context" ]]; then
+          print "* $context"
+        else
+          print "  $context"
+        fi
+      done
       ;;
     new)
       if (( $# != 1 )); then

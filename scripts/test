@@ -291,21 +291,34 @@ setup
 azctx new test-context >/dev/null 2>&1
 azctx use test-context >/dev/null 2>&1
 run_command azctx list
-if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == *"Active context: test-context"* ]]; then
+if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == *"* test-context"* ]]; then
   pass
 else
-  fail "Expected active context to be shown"
+  fail "Expected active context to be marked with *"
 fi
 teardown
 
-test_case "azctx list shows none when no active context"
+test_case "azctx list shows no asterisk when no active context"
 setup
 azctx new test-context >/dev/null 2>&1
 run_command azctx list
-if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == *"Active context: <none>"* ]]; then
+if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" != *"*"* ]]; then
   pass
 else
-  fail "Expected '<none>' when no active context"
+  fail "Expected no asterisk when no active context"
+fi
+teardown
+
+test_case "azctx list marks active context with asterisk"
+setup
+azctx new context1 >/dev/null 2>&1
+azctx new context2 >/dev/null 2>&1
+azctx use context1 >/dev/null 2>&1
+run_command azctx list
+if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == *"* context1"* ]]; then
+  pass
+else
+  fail "Expected '* context1' in output"
 fi
 teardown
 

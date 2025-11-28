@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd visual indicator for active context in list\n\nThis enhances the ''azctx list'' command output to make it easier to\nidentify the active context at a glance by marking it with an asterisk.\n\nChanges:\n- Mark active context with ''*'' prefix in the context list\n- Indent non-active contexts with spaces for alignment\n- Remove redundant \"Active context:\" line (asterisk makes it clear)\n- Update tests to verify asterisk indicator behavior\n- Add test to ensure no asterisk shown when no active context\n\nExample output before:\n  Active context: prod\n  dev\n  prod\n  test\n\nExample output after:\n    dev\n  * prod\n    test\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

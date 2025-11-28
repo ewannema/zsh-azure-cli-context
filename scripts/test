@@ -239,6 +239,33 @@ fi
 teardown
 
 #------------------------------------------------------------------------------
+# azctx current tests
+#------------------------------------------------------------------------------
+
+test_case "azctx current shows active context"
+setup
+azctx new test-context >/dev/null 2>&1
+azctx use test-context >/dev/null 2>&1
+run_command azctx current
+if [[ $CMD_EXIT -eq 0 ]] && [[ "$CMD_OUTPUT" == "test-context" ]]; then
+  pass
+else
+  fail "Expected 'test-context' output"
+fi
+teardown
+
+test_case "azctx current shows nothing when no active context"
+setup
+azctx new test-context >/dev/null 2>&1
+run_command azctx current
+if [[ $CMD_EXIT -eq 0 ]] && [[ -z "$CMD_OUTPUT" ]]; then
+  pass
+else
+  fail "Expected empty output when no active context"
+fi
+teardown
+
+#------------------------------------------------------------------------------
 # azctx rm tests
 #------------------------------------------------------------------------------
 

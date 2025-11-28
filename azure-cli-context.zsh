@@ -38,6 +38,14 @@ azctx() {
   shift
 
   case "${command}" in
+    current)
+      _r_get_active_context
+      local active_context=$REPLY
+
+      if [[ -n $active_context ]]; then
+        print "$active_context"
+      fi
+      ;;
     help)
       _azctx_usage
       return 0
@@ -189,6 +197,7 @@ _validate_context_name() {
 
 _azctx_usage() {
   print >&2 "azctx <command>"
+  print >&2 "azctx current - show the current active context"
   print >&2 "azctx help - show this help"
   print >&2 "azctx list - list available contexts"
   print >&2 "azctx new <context> - make a new context"

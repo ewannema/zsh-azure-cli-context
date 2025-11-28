@@ -21,11 +21,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y zsh
 
-    - name: Install ZSH (macOS)
-      if: runner.os == 'macOS'
-      run: |
-        brew install zsh
-
     - name: Run tests
       run: make test
 

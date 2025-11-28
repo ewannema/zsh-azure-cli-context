@@ -1,6 +1,5 @@
 #compdef azctx
 
-# Set default contexts directory with fallback
 : "${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}"
 
 _azctx() {

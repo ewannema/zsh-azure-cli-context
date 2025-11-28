@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(zunit:*)",
+      "Bash(make test-verbose:*)",
+      "Bash(make test:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git pull:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

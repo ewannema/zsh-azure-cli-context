@@ -56,6 +56,7 @@ setup() {
 teardown() {
   rm -rf "$ZSH_AZCTX_CONTEXTS_DIR"
   unset AZURE_CONFIG_DIR
+  unset ZSH_AZCTX_PREV_CONTEXT
 }
 
 # Run command and capture output/exit code
@@ -185,6 +186,76 @@ if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"does not exist"* ]]; then
   pass
 else
   fail "Expected error about non-existent context"
+fi
+teardown
+
+test_case "azctx use - switches to previous context"
+setup
+azctx new context1 >/dev/null 2>&1
+azctx new context2 >/dev/null 2>&1
+azctx use context1 >/dev/null 2>&1
+azctx use context2 >/dev/null 2>&1
+azctx use - >/dev/null 2>&1
+if [[ "$AZURE_CONFIG_DIR" == "${ZSH_AZCTX_CONTEXTS_DIR}/context1" ]]; then
+  pass
+else
+  fail "Expected to switch back to context1"
+fi
+teardown
+
+test_case "azctx use - rejects when no previous context"
+setup
+azctx new test-context >/dev/null 2>&1
+run_command azctx use -
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"no previous context"* ]]; then
+  pass
+else
+  fail "Expected error about no previous context"
+fi
+teardown
+
+test_case "azctx use - rejects when previous context no longer exists"
+setup
+azctx new context1 >/dev/null 2>&1
+azctx new context2 >/dev/null 2>&1
+azctx use context1 >/dev/null 2>&1
+azctx use context2 >/dev/null 2>&1
+azctx rm context1 >/dev/null 2>&1
+run_command azctx use -
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"no longer exists"* ]]; then
+  pass
+else
+  fail "Expected error about previous context no longer existing"
+fi
+teardown
+
+test_case "azctx use - can switch back and forth"
+setup
+azctx new context1 >/dev/null 2>&1
+azctx new context2 >/dev/null 2>&1
+azctx use context1 >/dev/null 2>&1
+azctx use context2 >/dev/null 2>&1
+azctx use - >/dev/null 2>&1
+azctx use - >/dev/null 2>&1
+if [[ "$AZURE_CONFIG_DIR" == "${ZSH_AZCTX_CONTEXTS_DIR}/context2" ]]; then
+  pass
+else
+  fail "Expected to switch back to context2"
+fi
+teardown
+
+test_case "azctx reset clears previous context"
+setup
+azctx new context1 >/dev/null 2>&1
+azctx new context2 >/dev/null 2>&1
+azctx use context1 >/dev/null 2>&1
+azctx use context2 >/dev/null 2>&1
+azctx reset >/dev/null 2>&1
+run_command azctx use -
+if [[ $CMD_EXIT -ne 0 ]] && [[ "$CMD_OUTPUT" == *"no previous context"* ]]; then
+  pass
+else
+  fail "Expected previous context to be cleared after reset"
 fi
 teardown
 

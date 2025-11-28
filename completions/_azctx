@@ -21,8 +21,11 @@ _azctx() {
           new)
             _message 'context name' && ret=0
             ;;
-          rm|use)
+          rm)
             _azctx_contexts && ret=0
+            ;;
+          use)
+            _azctx_use_completion && ret=0
             ;;
           run)
             if (( CURRENT == 2 )); then
@@ -68,6 +71,27 @@ _azctx_contexts() {
   contexts=("${(on)contexts[@]}")
 
   _describe 'context' contexts
+}
+
+_azctx_use_completion() {
+  local -a contexts options
+
+  contexts=("${ZSH_AZCTX_CONTEXTS_DIR}"/*(N:t))
+  contexts=("${(on)contexts[@]}")
+
+  # Add '-' option if there's a previous context
+  if [[ -n "$ZSH_AZCTX_PREV_CONTEXT" ]]; then
+    options=("-:Switch to previous context ($ZSH_AZCTX_PREV_CONTEXT)")
+  fi
+
+  if (( ${#contexts} == 0 )) && (( ${#options} == 0 )); then
+    _message 'no contexts available'
+    return 1
+  fi
+
+  _alternative \
+    'contexts:context:compadd -a contexts' \
+    'previous:previous context:compadd -a options'
 }
 
 _azctx "$@"

@@ -33,6 +33,9 @@ az account show
 azctx use normal-user
 az account show
 
+# Quickly switch back to the previous context (admin-user)
+azctx use -
+
 # View available contexts
 azctx list
 
@@ -118,6 +121,7 @@ azctx reset - reset context setting
 azctx rm <context> - remove an existing context
 azctx run <context> <command> - run a command in a context without switching
 azctx use <context> - switch to a context
+azctx use - - switch to previous context
 ```
 
 ## Contributing

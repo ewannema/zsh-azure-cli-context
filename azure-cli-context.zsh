@@ -17,6 +17,7 @@ fi
 #------------------------------------------------------------------------------
 typeset -g REPLY
 typeset -g -a reply
+typeset -g ZSH_AZCTX_PREV_CONTEXT
 
 #------------------------------------------------------------------------------
 # Public interface
@@ -93,6 +94,8 @@ azctx() {
         unset AZURE_CONFIG_DIR
       fi
 
+      unset ZSH_AZCTX_PREV_CONTEXT
+
       print "Reset active context"
       ;;
     rm)
@@ -146,12 +149,37 @@ azctx() {
 
       local context=$1
 
-      if ! _context_exists "$context"; then
-        print >&2 "ERROR: context '$context' does not exist"
-        return 1
+      # Handle '-' to switch to previous context
+      if [[ "$context" == "-" ]]; then
+        if [[ -z "$ZSH_AZCTX_PREV_CONTEXT" ]]; then
+          print >&2 "ERROR: no previous context"
+          return 1
+        fi
+
+        if ! _context_exists "$ZSH_AZCTX_PREV_CONTEXT"; then
+          print >&2 "ERROR: previous context '$ZSH_AZCTX_PREV_CONTEXT' no longer exists"
+          unset ZSH_AZCTX_PREV_CONTEXT
+          return 1
+        fi
+
+        context=$ZSH_AZCTX_PREV_CONTEXT
+      else
+        if ! _context_exists "$context"; then
+          print >&2 "ERROR: context '$context' does not exist"
+          return 1
+        fi
+      fi
+
+      # Save current context as previous before switching
+      _r_get_active_context
+      local current_context=$REPLY
+
+      if [[ -n "$current_context" ]] && [[ "$current_context" != "$context" ]]; then
+        ZSH_AZCTX_PREV_CONTEXT=$current_context
       fi
 
       export AZURE_CONFIG_DIR="${ZSH_AZCTX_CONTEXTS_DIR}/${context}"
+      print "Switched to context: $context"
       ;;
     *)
       print >&2 "ERROR: Unknown command: ${command}"
@@ -205,6 +233,7 @@ _azctx_usage() {
   print >&2 "azctx rm <context> - remove an existing context"
   print >&2 "azctx run <context> <command> - run a command in a context without switching"
   print >&2 "azctx use <context> - switch to a context"
+  print >&2 "azctx use - - switch to previous context"
 }
 
 _r_get_contexts() {

@@ -101,10 +101,10 @@ zplug "ewannema/zsh-azure-cli-context"
 git clone https://github.com/ewannema/zsh-azure-cli-context ~/.zsh/zsh-azure-cli-context
 
 # Add to your ~/.zshrc
-source ~/.zsh/zsh-azure-cli-context/azure-cli-context.zsh
+source ~/.zsh/zsh-azure-cli-context/azure-cli-context.plugin.zsh
 ```
 
-**Note:** The plugin automatically adds its completion directory to `fpath`. If completions don't work, ensure you have `compinit` loaded after sourcing the plugin:
+**Note:** If completions don't work, ensure you have `compinit` loaded after sourcing the plugin:
 
 ```zsh
 autoload -Uz compinit && compinit
@@ -123,6 +123,31 @@ azctx run <context> <command> - run a command in a context without switching
 azctx use <context> - switch to a context
 azctx use - - switch to previous context
 ```
+
+## Unloading the Plugin
+
+To cleanly unload the plugin and remove all functions and variables from your shell environment:
+
+```zsh
+azure_cli_context_plugin_unload
+```
+
+This will:
+- Remove the `azctx` command and all helper functions
+- Unset plugin-related environment variables (`ZSH_AZURE_CLI_CONTEXT_PLUGIN_DIR`, `ZSH_AZCTX_PREV_CONTEXT`)
+- Remove completion functions
+
+**Note:** This does **not** delete your contexts directory (`~/.azure-contexts`) or unset `AZURE_CONFIG_DIR`. To also clear the active context before unloading:
+
+```zsh
+azctx reset                          # Clear active context
+azure_cli_context_plugin_unload      # Unload plugin
+```
+
+This is useful when:
+- Testing the plugin during development
+- Switching between different plugin versions
+- Temporarily disabling the plugin without restarting your shell
 
 ## Contributing
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env zsh
 
 #------------------------------------------------------------------------------
+# Unit Tests for azure-cli-context
 # Simple ZSH test harness - no external dependencies required
 #------------------------------------------------------------------------------
 
@@ -50,7 +51,7 @@ fail() {
 # Setup and teardown
 setup() {
   export ZSH_AZCTX_CONTEXTS_DIR=$(mktemp -d)
-  source "${PWD}/azure-cli-context.zsh"
+  source "${PWD}/azure-cli-context.plugin.zsh"
 }
 
 teardown() {

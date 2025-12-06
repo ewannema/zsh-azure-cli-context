@@ -1,0 +1,110 @@
+#compdef azctx
+
+: "${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}"
+
+_azctx() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  typeset state line
+  typeset -i ret
+
+  ret=1
+
+  _arguments -C \
+    '1: :_azctx_commands' \
+    '*:: :->args' && ret=0
+
+  case $state in
+    args)
+      case ${words[1]} in
+        current|help|list|reset)
+          # No completion needed for these commands
+          ;;
+        new)
+          _message 'context name' && ret=0
+          ;;
+        rm)
+          _azctx_contexts && ret=0
+          ;;
+        use)
+          _azctx_use_completion && ret=0
+          ;;
+        run)
+          if (( CURRENT == 2 )); then
+            _azctx_contexts && ret=0
+          else
+            shift words
+            (( CURRENT-- ))
+            _normal && ret=0
+          fi
+          ;;
+      esac
+      ;;
+  esac
+
+  # shellcheck disable=SC2152
+  return ret
+}
+
+_azctx_commands() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local -a commands=(
+    "current:Show the current active context"
+    "help:Show help"
+    "list:List available contexts"
+    "new:Make a new context"
+    "reset:Reset context settings"
+    "rm:Remove a context"
+    "run:Run a command in a context"
+    "use:Switch to a context"
+  )
+
+  _describe -t commands 'command' commands "$@"
+}
+
+_azctx_contexts() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local -a contexts
+
+  contexts=("${ZSH_AZCTX_CONTEXTS_DIR}"/*(N:t))
+
+  if (( ${#contexts} == 0 )); then
+    _message 'no contexts available'
+    return 1
+  fi
+
+  contexts=("${(on)contexts[@]}")
+
+  _describe 'context' contexts
+}
+
+_azctx_use_completion() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  local -a contexts options
+
+  contexts=("${ZSH_AZCTX_CONTEXTS_DIR}"/*(N:t))
+  contexts=("${(on)contexts[@]}")
+
+  # Add '-' option if there's a previous context
+  if [[ -n "$ZSH_AZCTX_PREV_CONTEXT" ]]; then
+    options=("-:Switch to previous context ($ZSH_AZCTX_PREV_CONTEXT)")
+  fi
+
+  if (( ${#contexts} == 0 )) && (( ${#options} == 0 )); then
+    _message 'no contexts available'
+    return 1
+  fi
+
+  _alternative \
+    'contexts:context:compadd -a contexts' \
+    'previous:previous context:compadd -a options'
+}
+
+_azctx "$@"

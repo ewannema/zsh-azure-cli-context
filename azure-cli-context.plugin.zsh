@@ -1,20 +1,21 @@
 #!/usr/bin/env zsh
 
 #------------------------------------------------------------------------------
+# Zsh Plugin Standard compliance
+#------------------------------------------------------------------------------
+# Standardized $0 handling for reliable plugin directory detection
+0="${ZERO:-${${0:#$ZSH_ARGZERO}:-${(%):-%N}}}"
+0="${${(M)0:#/*}:-$PWD/$0}"
+
+#------------------------------------------------------------------------------
 # Global configuration variables
 #------------------------------------------------------------------------------
 : "${ZSH_AZCTX_CONTEXTS_DIR:="${HOME}/.azure-contexts"}"
 
 #------------------------------------------------------------------------------
-# Add completions to fpath
+# Global variables
 #------------------------------------------------------------------------------
-if [[ -d "${0:A:h}/completions" ]]; then
-  fpath=("${0:A:h}/completions" $fpath)
-fi
-
-#------------------------------------------------------------------------------
-# Internal global variables
-#------------------------------------------------------------------------------
+typeset -g ZSH_AZURE_CLI_CONTEXT_PLUGIN_DIR="${0:h}"
 typeset -g REPLY
 typeset -g -a reply
 typeset -g ZSH_AZCTX_PREV_CONTEXT
@@ -24,7 +25,9 @@ typeset -g ZSH_AZCTX_PREV_CONTEXT
 #------------------------------------------------------------------------------
 
 azctx() {
-  # Lazy initialization - create contexts directory on first use
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
   if [[ ! -d $ZSH_AZCTX_CONTEXTS_DIR ]] && ! mkdir -p -- "$ZSH_AZCTX_CONTEXTS_DIR"; then
     print >&2 "ERROR: Could not create contexts dir: $ZSH_AZCTX_CONTEXTS_DIR"
     return 1
@@ -200,9 +203,10 @@ azctx() {
 #------------------------------------------------------------------------------
 
 _validate_context_name() {
-  local context=$1
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
-  # Empty name
+  local context=$1
   if [[ -z "$context" ]]; then
     print >&2 "ERROR: Context name cannot be empty"
     return 1
@@ -230,6 +234,9 @@ _validate_context_name() {
 }
 
 _azctx_usage() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
   print >&2 "azctx <command>"
   print >&2 "azctx current - show the current active context"
   print >&2 "azctx help - show this help"
@@ -243,8 +250,10 @@ _azctx_usage() {
 }
 
 _r_get_contexts() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
   local -a contexts
-  # get dirs and return the last component (tail)
   contexts=("$ZSH_AZCTX_CONTEXTS_DIR"/*(N/:t))
 
   # sort the contexts
@@ -254,15 +263,19 @@ _r_get_contexts() {
 }
 
 _context_exists() {
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
   _r_get_contexts
   local -a contexts=("${reply[@]}")
 
-  # non-zero index -> found
   (( ${contexts[(Ie)$1]} ))
 }
 
 _r_get_active_context() {
-  # Azure config dir is not set
+  builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
+  builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
   if [[ -z "$AZURE_CONFIG_DIR" ]]; then
     REPLY=""
     return
@@ -284,4 +297,34 @@ _r_get_active_context() {
 
   REPLY=$context
   return
+}
+
+#------------------------------------------------------------------------------
+# Plugin unload support
+#------------------------------------------------------------------------------
+# If this function is called when the plugin is unloaded it should reverse all
+# side effects of loading the plugin
+azure_cli_context_plugin_unload() {
+  # Remove main command
+  unfunction azctx 2>/dev/null
+
+  # Remove private helper functions
+  unfunction _validate_context_name 2>/dev/null
+  unfunction _azctx_usage 2>/dev/null
+  unfunction _r_get_contexts 2>/dev/null
+  unfunction _context_exists 2>/dev/null
+  unfunction _r_get_active_context 2>/dev/null
+
+  # Remove completion functions
+  unfunction _azctx 2>/dev/null
+  unfunction _azctx_commands 2>/dev/null
+  unfunction _azctx_contexts 2>/dev/null
+  unfunction _azctx_use_completion 2>/dev/null
+
+  # Remove this unload function itself
+  unfunction azure_cli_context_plugin_unload 2>/dev/null
+
+  # Unset plugin variables
+  unset ZSH_AZURE_CLI_CONTEXT_PLUGIN_DIR
+  unset ZSH_AZCTX_PREV_CONTEXT
 }

@@ -15,9 +15,9 @@
 #------------------------------------------------------------------------------
 # Global variables
 #------------------------------------------------------------------------------
-typeset -g ZSH_AZURE_CLI_CONTEXT_PLUGIN_DIR="${0:h}"
 typeset -g REPLY
 typeset -g -a reply
+typeset -g ZSH_AZURE_CLI_CONTEXT_PLUGIN_DIR="${0:h}"
 typeset -g ZSH_AZCTX_PREV_CONTEXT
 
 #------------------------------------------------------------------------------
@@ -62,6 +62,7 @@ azctx() {
       local active_context=$REPLY
 
       # Print contexts with visual indicator for active
+      local context
       for context in "${contexts[@]}"; do
         if [[ "$context" == "$active_context" ]]; then
           print "* $context"
@@ -254,6 +255,8 @@ _r_get_contexts() {
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
 
   local -a contexts
+  typeset -g -a reply
+
   contexts=("$ZSH_AZCTX_CONTEXTS_DIR"/*(N/:t))
 
   # sort the contexts
@@ -275,6 +278,8 @@ _context_exists() {
 _r_get_active_context() {
   builtin emulate -L zsh ${=${options[xtrace]:#off}:+-o xtrace}
   builtin setopt extended_glob warn_create_global typeset_silent no_short_loops rc_quotes no_auto_pushd
+
+  typeset -g REPLY
 
   if [[ -z "$AZURE_CONFIG_DIR" ]]; then
     REPLY=""
